@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
@@ -12,46 +11,20 @@ import (
 func Connect() *sql.DB {
 	dsn := os.Getenv("DATABASE_URL")
 
-	// Step 1: Ensure DB exists (DEV ONLY)
-	ensureDatabase()
+	if dsn == "" {
+		log.Fatal("DATABASE_URL is not set")
+	}
 
-	// Step 2: Connect to actual DB
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to open DB:", err)
 	}
 
 	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to connect DB:", err)
 	}
+
+	log.Println("✅ Connected to database")
 
 	return db
-}
-
-// 🔧 Create DB if not exists (local only)
-func ensureDatabase() {
-	baseDSN := "postgres://localhost:5432/postgres?sslmode=disable"
-
-	db, err := sql.Open("postgres", baseDSN)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	var exists bool
-	err = db.QueryRow(
-		"SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = 'profiles_db')",
-	).Scan(&exists)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if !exists {
-		_, err = db.Exec("CREATE DATABASE profiles_db")
-		if err != nil {
-			log.Fatal("failed to create database:", err)
-		}
-		fmt.Println("✅ Database 'profiles_db' created")
-	}
 }
